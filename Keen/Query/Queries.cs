@@ -112,7 +112,7 @@ namespace Keen.Core.Query
             return result;
         }
 
-        public async Task<IEnumerable<QueryGroupValue<string>>> Metric(QueryType queryType, string collection, string targetProperty, string groupby, QueryTimeframe timeframe = null, IEnumerable<QueryFilter> filters = null, string timezone = "")
+        public async Task<IEnumerable<QueryGroupValue<string>>> Metric(QueryType queryType, string collection, string targetProperty, IEnumerable<string> groupby, QueryTimeframe timeframe = null, IEnumerable<QueryFilter> filters = null, string timezone = "")
         {
             if (queryType == null)
                 throw new ArgumentNullException("queryType");
@@ -120,13 +120,13 @@ namespace Keen.Core.Query
                 throw new ArgumentNullException("collection");
             if (string.IsNullOrWhiteSpace(targetProperty) && (queryType != QueryType.Count()))
                 throw new ArgumentNullException("targetProperty");
-            if (string.IsNullOrWhiteSpace(groupby))
-                throw new ArgumentNullException("groupby", "groupby field name must be specified for a groupby query");
+            if (!groupby.Any())
+                throw new ArgumentNullException("groupby", "at least one groupby field name must be specified for a groupby query");
 
             var parms = new Dictionary<string, string>();
             parms.Add(KeenConstants.QueryParmEventCollection, collection);
             parms.Add(KeenConstants.QueryParmTargetProperty, targetProperty);
-            parms.Add(KeenConstants.QueryParmGroupBy, groupby);
+            parms.Add(KeenConstants.QueryParmGroupBy, string.Join(",", groupby));
             parms.Add(KeenConstants.QueryParmTimeframe, timeframe.ToSafeString());
             parms.Add(KeenConstants.QueryParmTimezone, timezone);
             parms.Add(KeenConstants.QueryParmFilters, filters == null ? "" : JArray.FromObject(filters).ToString());
@@ -139,14 +139,14 @@ namespace Keen.Core.Query
                 // This is to support SelectUnique which is the only query type with a list-type result.
                 result = from r in reply.Value<JArray>("result")
                          let c = string.Join(",", r.Value<JArray>("result").Values<string>())
-                         let g = r.Value<string>(groupby)
+                         let g = r.Value<string>(string.Join(",", groupby))
                          select new QueryGroupValue<string>(c, g);
             }
             else
             {
                 result = from r in reply.Value<JArray>("result")
                          let c = r.Value<string>("result")
-                         let g = r.Value<string>(groupby)
+                         let g = r.Value<string>(string.Join(",", groupby))
                          select new QueryGroupValue<string>(c, g);
             }
             return result;
@@ -195,7 +195,7 @@ namespace Keen.Core.Query
             return result;
         }
 
-        public async Task<IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>>> Metric(QueryType queryType, string collection, string targetProperty, string groupby, QueryTimeframe timeframe, QueryInterval interval, IEnumerable<QueryFilter> filters = null, string timezone = "")
+        public async Task<IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>>> Metric(QueryType queryType, string collection, string targetProperty, IEnumerable<string> groupby, QueryTimeframe timeframe, QueryInterval interval, IEnumerable<QueryFilter> filters = null, string timezone = "")
         {
             if (queryType == null)
                 throw new ArgumentNullException("queryType");
@@ -207,13 +207,13 @@ namespace Keen.Core.Query
                 throw new ArgumentException("timeframe", "Timeframe must be specified for a series query.");
             if (null == interval)
                 throw new ArgumentNullException("interval", "interval must be specified for a series query");
-            if (string.IsNullOrWhiteSpace(groupby))
-                throw new ArgumentNullException("groupby", "groupby field name must be specified for a goupby query");
+            if (!groupby.Any())
+                throw new ArgumentNullException("groupby", "at least one groupby field name must be specified for a goupby query");
 
             var parms = new Dictionary<string, string>();
             parms.Add(KeenConstants.QueryParmEventCollection, collection);
             parms.Add(KeenConstants.QueryParmTargetProperty, targetProperty);
-            parms.Add(KeenConstants.QueryParmGroupBy, groupby);
+            parms.Add(KeenConstants.QueryParmGroupBy, string.Join(",", groupby));
             parms.Add(KeenConstants.QueryParmTimeframe, timeframe.ToSafeString());
             parms.Add(KeenConstants.QueryParmInterval, interval.ToSafeString());
             parms.Add(KeenConstants.QueryParmTimezone, timezone);
@@ -303,7 +303,7 @@ namespace Keen.Core.Query
             return result;
         }
 
-        public async Task<IEnumerable<QueryGroupValue<IDictionary<string, string>>>> MultiAnalysis(string collection, IEnumerable<MultiAnalysisParam> analysisParams, QueryTimeframe timeframe = null, IEnumerable<QueryFilter> filters = null, string groupby = "", string timezone = "")
+        public async Task<IEnumerable<QueryGroupValue<IDictionary<string, string>>>> MultiAnalysis(string collection, IEnumerable<MultiAnalysisParam> analysisParams, QueryTimeframe timeframe = null, IEnumerable<QueryFilter> filters = null, IEnumerable<string> groupby = null, string timezone = "")
         {
             var jObs = analysisParams.Select(x =>
                 new JProperty(x.Label, JObject.FromObject(new { analysis_type = x.Analysis, target_property = x.TargetProperty })));
@@ -314,7 +314,7 @@ namespace Keen.Core.Query
             parms.Add(KeenConstants.QueryParmTimeframe, timeframe.ToSafeString());
             parms.Add(KeenConstants.QueryParmTimezone, timezone);
             parms.Add(KeenConstants.QueryParmFilters, filters == null ? "" : JArray.FromObject(filters).ToString());
-            parms.Add(KeenConstants.QueryParmGroupBy, groupby);
+            parms.Add(KeenConstants.QueryParmGroupBy, groupby == null ? "" : string.Join(",", groupby));
             parms.Add(KeenConstants.QueryParmAnalyses, parmsJson);
 
             var reply = await KeenWebApiRequest(KeenConstants.QueryMultiAnalysis, parms).ConfigureAwait(false);
@@ -326,7 +326,7 @@ namespace Keen.Core.Query
                 string grpVal = "";
                 foreach (JProperty p in i.Values<JProperty>())
                 {
-                    if (p.Name == groupby)
+                    if (groupby.Contains(p.Name))
                         grpVal = (string)p.Value;
                     else
                         d.Add(p.Name, (string)p.Value);
@@ -368,7 +368,7 @@ namespace Keen.Core.Query
             return result;
         }
 
-        public async Task<IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>>> MultiAnalysis(string collection, IEnumerable<MultiAnalysisParam> analysisParams, QueryTimeframe timeframe = null, QueryInterval interval = null, IEnumerable<QueryFilter> filters = null, string groupby = "", string timezone = "")
+        public async Task<IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>>> MultiAnalysis(string collection, IEnumerable<MultiAnalysisParam> analysisParams, QueryTimeframe timeframe = null, QueryInterval interval = null, IEnumerable<QueryFilter> filters = null, IEnumerable<string> groupby = null, string timezone = "")
         {
             var jObs = analysisParams.Select(x => new JProperty(x.Label, JObject.FromObject(new { analysis_type = x.Analysis, target_property = x.TargetProperty })));
             var parmsJson = JsonConvert.SerializeObject(new JObject(jObs), Formatting.None, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
@@ -378,7 +378,7 @@ namespace Keen.Core.Query
             parms.Add(KeenConstants.QueryParmTimeframe, timeframe.ToSafeString());
             parms.Add(KeenConstants.QueryParmInterval, interval.ToSafeString());
             parms.Add(KeenConstants.QueryParmTimezone, timezone);
-            parms.Add(KeenConstants.QueryParmGroupBy, groupby);
+            parms.Add(KeenConstants.QueryParmGroupBy, groupby == null ? "" : string.Join(",", groupby));
             parms.Add(KeenConstants.QueryParmFilters, filters == null ? "" : JArray.FromObject(filters).ToString());
             parms.Add(KeenConstants.QueryParmAnalyses, parmsJson);
 
@@ -395,7 +395,7 @@ namespace Keen.Core.Query
                     foreach (JProperty p in o.Values<JProperty>())
                     {
 
-                        if (p.Name == groupby)
+                        if (groupby.Contains(p.Name))
                             grpVal = (string)p.Value;
                         else
                             d.Add(p.Name, (string)p.Value);

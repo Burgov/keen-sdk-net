@@ -251,7 +251,7 @@ namespace Keen.Core
             if (!eventsInfo.Any())
                 return new List<CachedEvent>();
             // Build a container object with a property to identify the collection
-            var jEvent = new JObject {{collection, JToken.FromObject(eventsInfo)}};
+            var jEvent = new JObject { { collection, JToken.FromObject(eventsInfo) } };
 
             // Use the bulk interface to add events
             return await Event.AddEvents(jEvent)
@@ -362,12 +362,12 @@ namespace Keen.Core
             // Ensure this event has a 'keen' object of the correct type
             if (null == jEvent.Property("keen"))
                 jEvent.Add("keen", new JObject());
-            else if (jEvent.Property("keen").Value.GetType() != typeof (JObject))
+            else if (jEvent.Property("keen").Value.GetType() != typeof(JObject))
                 throw new KeenException(string.Format("Value of property \"keen\" must be an object, is {0}",
                     jEvent.Property("keen").GetType()));
 
 
-            var keen = ((JObject) jEvent.Property("keen").Value);
+            var keen = ((JObject)jEvent.Property("keen").Value);
             if (addOns != null && addOns.Any())
                 keen.Add("addons", JArray.FromObject(addOns));
 
@@ -562,7 +562,7 @@ namespace Keen.Core
         /// <param name="timezone">The timezone to use when specifying a relative timeframe. Optional, may be blank.</param>
         /// <returns></returns>
         public async Task<IEnumerable<QueryGroupValue<string>>> QueryGroupAsync(QueryType queryType, string collection,
-            string targetProperty, string groupBy, QueryTimeframe timeframe = null,
+            string targetProperty, IEnumerable<string> groupBy, QueryTimeframe timeframe = null,
             IEnumerable<QueryFilter> filters = null, string timezone = "")
         {
             return
@@ -570,6 +570,14 @@ namespace Keen.Core
                     Queries.Metric(queryType, collection, targetProperty, groupBy, timeframe, filters, timezone)
                         .ConfigureAwait(false);
         }
+
+        public async Task<IEnumerable<QueryGroupValue<string>>> QueryGroupAsync(QueryType queryType, string collection,
+            string targetProperty, string groupBy, QueryTimeframe timeframe = null,
+            IEnumerable<QueryFilter> filters = null, string timezone = "")
+        {
+            return await QueryGroupAsync(queryType, collection, targetProperty, new List<string> { groupBy }, timeframe);
+        }
+
 
         /// <summary>
         /// Returns values collected by group.
@@ -583,7 +591,7 @@ namespace Keen.Core
         /// <param name="timezone">The timezone to use when specifying a relative timeframe. Optional, may be blank.</param>
         /// <returns></returns>
         public IEnumerable<QueryGroupValue<string>> QueryGroup(QueryType queryType, string collection,
-            string targetProperty, string groupBy, QueryTimeframe timeframe = null,
+            string targetProperty, IEnumerable<string> groupBy, QueryTimeframe timeframe = null,
             IEnumerable<QueryFilter> filters = null, string timezone = "")
         {
             try
@@ -595,6 +603,13 @@ namespace Keen.Core
             {
                 throw ex.TryUnwrap();
             }
+        }
+
+        public IEnumerable<QueryGroupValue<string>> QueryGroup(QueryType queryType, string collection,
+            string targetProperty, string groupBy, QueryTimeframe timeframe = null,
+            IEnumerable<QueryFilter> filters = null, string timezone = "")
+        {
+            return QueryGroup(queryType, collection, targetProperty, new List<string> { groupBy }, timeframe);
         }
 
         /// <summary>
@@ -658,13 +673,19 @@ namespace Keen.Core
         /// <param name="timezone">The timezone to use when specifying a relative timeframe. Optional, may be blank.</param>
         /// <returns></returns>
         public async Task<IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>>> QueryIntervalGroupAsync
-            (QueryType queryType, string collection, string targetProperty, string groupBy, QueryTimeframe timeframe,
+            (QueryType queryType, string collection, string targetProperty, IEnumerable<string> groupBy, QueryTimeframe timeframe,
                 QueryInterval interval, IEnumerable<QueryFilter> filters = null, string timezone = "")
         {
             return
                 await
                     Queries.Metric(queryType, collection, targetProperty, groupBy, timeframe, interval, filters,
                         timezone).ConfigureAwait(false);
+        }
+        public async Task<IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>>> QueryIntervalGroupAsync
+            (QueryType queryType, string collection, string targetProperty, string groupBy, QueryTimeframe timeframe,
+                QueryInterval interval, IEnumerable<QueryFilter> filters = null, string timezone = "")
+        {
+            return await QueryIntervalGroupAsync(queryType, collection, targetProperty, new List<string> { groupBy }, timeframe, interval, filters, timezone);
         }
 
         /// <summary>
@@ -680,7 +701,7 @@ namespace Keen.Core
         /// <param name="timezone">The timezone to use when specifying a relative timeframe. Optional, may be blank.</param>
         /// <returns></returns>
         public IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>> QueryIntervalGroup(
-            QueryType queryType, string collection, string targetProperty, string groupBy, QueryTimeframe timeframe,
+            QueryType queryType, string collection, string targetProperty, IEnumerable<string> groupBy, QueryTimeframe timeframe,
             QueryInterval interval, IEnumerable<QueryFilter> filters = null, string timezone = "")
         {
             try
@@ -694,6 +715,14 @@ namespace Keen.Core
                 throw ex.TryUnwrap();
             }
         }
+
+        public IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>> QueryIntervalGroup(
+            QueryType queryType, string collection, string targetProperty, string groupBy, QueryTimeframe timeframe,
+            QueryInterval interval, IEnumerable<QueryFilter> filters = null, string timezone = "")
+        {
+            return QueryIntervalGroup(queryType, collection, targetProperty, new List<string> { groupBy }, timeframe, interval, filters, timezone);
+        }
+
 
         /// <summary>
         /// Extract full-form event data with all property values. 
@@ -820,13 +849,21 @@ namespace Keen.Core
         /// <returns></returns>
         public async Task<IEnumerable<QueryGroupValue<IDictionary<string, string>>>> QueryMultiAnalysisGroupAsync(
             string collection, IEnumerable<MultiAnalysisParam> analysisParams, QueryTimeframe timeframe = null,
-            IEnumerable<QueryFilter> filters = null, string groupBy = "", string timezone = "")
+            IEnumerable<QueryFilter> filters = null, IEnumerable<string> groupBy = null, string timezone = "")
         {
             return
                 await
                     Queries.MultiAnalysis(collection, analysisParams, timeframe, filters, groupBy, timezone)
                         .ConfigureAwait(false);
         }
+
+        public async Task<IEnumerable<QueryGroupValue<IDictionary<string, string>>>> QueryMultiAnalysisGroupAsync(
+            string collection, IEnumerable<MultiAnalysisParam> analysisParams, QueryTimeframe timeframe = null,
+            IEnumerable<QueryFilter> filters = null, string groupBy = "", string timezone = "")
+        {
+            return await QueryMultiAnalysisGroupAsync(collection, analysisParams, timeframe, filters, string.IsNullOrWhiteSpace(groupBy) ? null : new List<string> { groupBy }, timezone);
+        }
+
 
         /// <summary>
         /// Run multiple types of analysis over the same data,
@@ -841,7 +878,7 @@ namespace Keen.Core
         /// <returns></returns>
         public IEnumerable<QueryGroupValue<IDictionary<string, string>>> QueryMultiAnalysisGroup(string collection,
             IEnumerable<MultiAnalysisParam> analysisParams, QueryTimeframe timeframe = null,
-            IEnumerable<QueryFilter> filters = null, string groupBy = "", string timezone = "")
+            IEnumerable<QueryFilter> filters = null, IEnumerable<string> groupBy = null, string timezone = "")
         {
             try
             {
@@ -854,6 +891,14 @@ namespace Keen.Core
                 throw ex.TryUnwrap();
             }
         }
+
+        public IEnumerable<QueryGroupValue<IDictionary<string, string>>> QueryMultiAnalysisGroup(string collection,
+            IEnumerable<MultiAnalysisParam> analysisParams, QueryTimeframe timeframe = null,
+            IEnumerable<QueryFilter> filters = null, string groupBy = "", string timezone = "")
+        {
+            return QueryMultiAnalysisGroup(collection, analysisParams, timeframe, filters, string.IsNullOrWhiteSpace(groupBy) ? null : new List<string> { groupBy }, timezone);
+        }
+
 
         /// <summary>
         /// Run multiple types of analysis over the same data.
@@ -918,12 +963,20 @@ namespace Keen.Core
         public async Task<IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>>>
             QueryMultiAnalysisIntervalGroupAsync(string collection, IEnumerable<MultiAnalysisParam> analysisParams,
                 QueryTimeframe timeframe = null, QueryInterval interval = null, IEnumerable<QueryFilter> filters = null,
-                string groupBy = "", string timezone = "")
+                IEnumerable<string> groupBy = null, string timezone = "")
         {
             return
                 await
                     Queries.MultiAnalysis(collection, analysisParams, timeframe, interval, filters, groupBy, timezone)
                         .ConfigureAwait(false);
+        }
+
+        public async Task<IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>>>
+            QueryMultiAnalysisIntervalGroupAsync(string collection, IEnumerable<MultiAnalysisParam> analysisParams,
+                QueryTimeframe timeframe = null, QueryInterval interval = null, IEnumerable<QueryFilter> filters = null,
+                string groupBy = "", string timezone = "")
+        {
+            return await QueryMultiAnalysisIntervalGroupAsync(collection, analysisParams, timeframe, interval, filters, string.IsNullOrWhiteSpace(groupBy) ? null : new List<string> { groupBy }, timezone);
         }
 
         /// <summary>
@@ -941,7 +994,7 @@ namespace Keen.Core
         public IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>>
             QueryMultiAnalysisIntervalGroup(string collection, IEnumerable<MultiAnalysisParam> analysisParams,
                 QueryTimeframe timeframe = null, QueryInterval interval = null, IEnumerable<QueryFilter> filters = null,
-                string groupBy = "", string timezone = "")
+                IEnumerable<string> groupBy = null, string timezone = "")
         {
             try
             {
@@ -955,5 +1008,12 @@ namespace Keen.Core
             }
         }
 
+        public IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>>
+            QueryMultiAnalysisIntervalGroup(string collection, IEnumerable<MultiAnalysisParam> analysisParams,
+                QueryTimeframe timeframe = null, QueryInterval interval = null, IEnumerable<QueryFilter> filters = null,
+                string groupBy = "", string timezone = "")
+        {
+            return QueryMultiAnalysisIntervalGroup(collection, analysisParams, timeframe, interval, filters, string.IsNullOrWhiteSpace(groupBy) ? null : new List<string> { groupBy }, timezone);
+        }
     }
 }

@@ -147,7 +147,7 @@ namespace Keen.Net.Test
         {
             var client = new KeenClient(SettingsEnv);
             var timeframe = QueryRelativeTimeframe.PreviousNDays(2);
-            var groupby = "field1";
+            var groupby = new List<string> { "field1" };
             IEnumerable<QueryGroupValue<string>> reply = new List<QueryGroupValue<string>>()
             {
                 new QueryGroupValue<string>( "0", "field1" ),
@@ -162,7 +162,7 @@ namespace Keen.Net.Test
                         It.Is<QueryType>(q => q == QueryType.Count()),
                         It.Is<string>(c => c == testCol),
                         It.Is<string>(p => p == ""),
-                        It.Is<string>(g => g == groupby),
+                        It.Is<IEnumerable<string>>(g => g == groupby),
                         It.Is<QueryTimeframe>(t => t == timeframe),
                         It.Is<IEnumerable<QueryFilter>>(f => f == null),
                         It.Is<string>(z => z == "")))
@@ -184,7 +184,7 @@ namespace Keen.Net.Test
             var client = new KeenClient(SettingsEnv);
             var timeframe = QueryRelativeTimeframe.PreviousNDays(2);
             var interval = QueryInterval.EveryNHours(2);
-            var groupby = "field1";
+            var groupby = new List<string> { "field1" };
 
             IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>> reply = new List<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>>()
             {
@@ -214,7 +214,7 @@ namespace Keen.Net.Test
                         It.Is<QueryType>(q => q == QueryType.Count()),
                         It.Is<string>(c => c == testCol),
                         It.Is<string>(p => p == ""),
-                        It.Is<string>(g => g == groupby),
+                        It.Is<IEnumerable<string>>(g => g == groupby),
                         It.Is<QueryTimeframe>(t => t == timeframe),
                         It.Is<QueryInterval>(i => i == interval),
                         It.Is<IEnumerable<QueryFilter>>(f => f == null),
@@ -586,7 +586,7 @@ namespace Keen.Net.Test
         {
             var client = new KeenClient(SettingsEnv);
             var prop = "field1";
-            var groupby = "field1";
+            var groupby = new List<string> { "field1" };
             var timeframe = QueryRelativeTimeframe.PreviousNDays(5);
             IEnumerable<QueryGroupValue<string>> reply = new List<QueryGroupValue<string>>()
             {
@@ -602,7 +602,7 @@ namespace Keen.Net.Test
                         It.Is<QueryType>(q => q == QueryType.SelectUnique()),
                         It.Is<string>(c => c == testCol),
                         It.Is<string>(p => p == prop),
-                        It.Is<string>(g => g == groupby),
+                        It.Is<IEnumerable<string>>(g => g == groupby),
                         It.Is<QueryRelativeTimeframe>(t => t == timeframe),
                         It.Is<IEnumerable<QueryFilter>>(f => f == null),
                         It.Is<string>(t => t == "")
@@ -691,7 +691,7 @@ namespace Keen.Net.Test
             var prop = "field1";
             var timeframe = new QueryAbsoluteTimeframe(DateTime.Now.AddDays(-1), DateTime.Now);
             var interval = QueryInterval.EveryNHours(4);
-            var groupby = "field1";
+            var groupby = new List<string> { "field1" };
             var resultl = "hello,goodbye,I'm late";
 
             IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<string>>>> result =
@@ -721,7 +721,7 @@ namespace Keen.Net.Test
                         It.Is<QueryType>(q => q == QueryType.SelectUnique()),
                         It.Is<string>(c => c == testCol),
                         It.Is<string>(p => p == prop),
-                        It.Is<string>(g => g == groupby),
+                        It.Is<IEnumerable<string>>(g => g == groupby),
                         It.Is<QueryAbsoluteTimeframe>(t => t == timeframe),
                         It.Is<QueryInterval>(i => i == interval),
                         It.Is<IEnumerable<QueryFilter>>(f => f == null),
@@ -956,7 +956,7 @@ namespace Keen.Net.Test
         public async void MultiAnalysis_ValidGroupBy_Success()
         {
             var client = new KeenClient(SettingsEnv);
-            var groupby = "field1";
+            var groupby = new List<string> { "field1" };
             IEnumerable<MultiAnalysisParam> param = new List<MultiAnalysisParam>() 
             { 
                 new MultiAnalysisParam("first", MultiAnalysisParam.Metric.Count()),
@@ -967,11 +967,11 @@ namespace Keen.Net.Test
             dict.Add("second", "fff");
             dict.Add("third", "aaa");
             dict.Add("first", "123");
-            dict.Add(groupby, "123");
+            dict.Add(string.Join(",", groupby), "123");
             IEnumerable<QueryGroupValue<IDictionary<string, string>>> result = new List<QueryGroupValue<IDictionary<string, string>>>()
             {
-                new QueryGroupValue<IDictionary<string,string>>(dict, groupby),
-                new QueryGroupValue<IDictionary<string,string>>(dict, groupby),
+                new QueryGroupValue<IDictionary<string,string>>(dict, string.Join(",", groupby)),
+                new QueryGroupValue<IDictionary<string,string>>(dict, string.Join(",", groupby)),
             };
 
             Mock<IQueries> queryMock = null;
@@ -983,7 +983,7 @@ namespace Keen.Net.Test
                         It.Is<IEnumerable<MultiAnalysisParam>>(p => p == param),
                         It.Is<QueryTimeframe>(t => t == null),
                         It.Is<IEnumerable<QueryFilter>>(f => f == null),
-                        It.Is<string>(g => g == groupby),
+                        It.Is<IEnumerable<string>>(g => g == groupby),
                         It.Is<string>(tz => tz == "")
                       ))
                     .Returns(Task.FromResult(result));
@@ -1006,7 +1006,7 @@ namespace Keen.Net.Test
             var client = new KeenClient(SettingsEnv);
             var timeframe = QueryRelativeTimeframe.PreviousNDays(3);
             var interval = QueryInterval.Daily();
-            var groupby = "field1";
+            var groupby = new List<string> { "field1" };
             IEnumerable<MultiAnalysisParam> param = new List<MultiAnalysisParam>() 
             { 
                 new MultiAnalysisParam("first", MultiAnalysisParam.Metric.Count()),
@@ -1018,21 +1018,21 @@ namespace Keen.Net.Test
             dict.Add("second", "fff");
             dict.Add("third", "aaa");
             dict.Add("first", "123");
-            dict.Add(groupby, "123");
+            dict.Add(string.Join(",", groupby), "123");
             IEnumerable<QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>> result =
                 new List<QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>>()
             {
                 new QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>(
                     new List<QueryGroupValue<IDictionary<string,string>>>(){
-                        new QueryGroupValue<IDictionary<string,string>>(dict, groupby),
-                        new QueryGroupValue<IDictionary<string,string>>(dict, groupby)
+                        new QueryGroupValue<IDictionary<string,string>>(dict, string.Join(",", groupby)),
+                        new QueryGroupValue<IDictionary<string,string>>(dict, string.Join(",", groupby))
                     }, 
                     DateTime.Now, DateTime.Now.AddSeconds(2)
                 ),
                 new QueryIntervalValue<IEnumerable<QueryGroupValue<IDictionary<string, string>>>>(
                     new List<QueryGroupValue<IDictionary<string,string>>>(){
-                        new QueryGroupValue<IDictionary<string,string>>(dict, groupby),
-                        new QueryGroupValue<IDictionary<string,string>>(dict, groupby)
+                        new QueryGroupValue<IDictionary<string,string>>(dict, string.Join(",", groupby)),
+                        new QueryGroupValue<IDictionary<string,string>>(dict, string.Join(",", groupby))
                     }, 
                     DateTime.Now, DateTime.Now.AddSeconds(2)
                 ),
@@ -1048,7 +1048,7 @@ namespace Keen.Net.Test
                         It.Is<QueryTimeframe>(t => t == timeframe),
                         It.Is<QueryInterval>(i=>i==interval),
                         It.Is<IEnumerable<QueryFilter>>(f => f == null),
-                        It.Is<string>(g => g == groupby),
+                        It.Is<IEnumerable<string>>(g => g == groupby),
                         It.Is<string>(tz => tz == "")
                       ))
                     .Returns(Task.FromResult(result));
